@@ -5,4 +5,4 @@ WORKDIR /cftemplates
 
 COPY *.yaml .
 
-CMD ["aws", "cloudformation"]
+ENTRYPOINT ["/bin/sh", "-c", "aws"]
