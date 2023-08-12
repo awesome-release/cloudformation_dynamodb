@@ -1,0 +1,57 @@
+---
+auto_deploy: true
+environment_templates:
+- name: ephemeral
+- name: permanent
+service_accounts:
+- name: cf-role
+  cloud_role: arn:aws:iam::${cloud_account_id}:role/myDynamoDBRole
+services:
+- name: cf-template
+  has_repo: true
+  image: awesome-release/cloudformation_dynamodb/cf_template
+  build:
+    context: "."
+jobs:
+- name: cf-template-deploy
+  service_account_name: cf-role
+  from_services: cf-template
+  command:
+  - "/bin/sh"
+  - "-c"
+  - aws cloudformation deploy --template-file dynamodb.yaml --stack-name dynamodb-${RELEASE_ENV_ID}
+    --parameter-overrides TableName=${TABLE_NAME}-${RELEASE_ENV_ID} HashKeyElementName=${PRIMARY_KEYNAME}
+- name: cf-template-destroy
+  service_account_name: cf-role
+  from_services: cf-template
+  command:
+  - "/bin/sh"
+  - "-c"
+  - aws cloudformation delete-stack --stack-name dynamodb-${RELEASE_ENV_ID}
+resources:
+  cpu:
+    limits: 1000m
+    requests: 100m
+  memory:
+    limits: 1Gi
+    requests: 100Mi
+  replicas: 1
+workflows:
+- name: setup
+  parallelize:
+  - step: step-0
+    tasks:
+    - jobs.cf-template-deploy
+- name: patch
+  parallelize:
+  - step: step-0
+    tasks:
+    - jobs.cf-template-deploy
+- name: teardown
+  parallelize:
+  - step: remove-db
+    tasks:
+    - jobs.cf-template-destroy
+  - step: remove-environment
+    tasks:
+    - release.remove_environment

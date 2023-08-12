@@ -1,0 +1,9 @@
+---
+defaults: []
+services:
+  cf-template:
+  - key: TABLE_NAME
+    value: myDynamoTable
+  - key: PRIMARY_KEYNAME
+    value: sortKey
+mapping: {}
